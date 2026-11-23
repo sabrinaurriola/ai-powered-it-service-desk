@@ -1,0 +1,1026 @@
+{
+  "name": "WF-03 Ticket Creation",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -896,
+        144
+      ],
+      "id": "34a2d0f3-874e-4417-bbc2-42ecec3acb02",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tbl2QY27S7LVlXgLT"
+        },
+        "filterByFormula": "={{ \"{request_id}='\" + $('Execute Workflow Trigger').first().json.request_id + \"'\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -672,
+        144
+      ],
+      "id": "a889cdf9-fe81-43c8-a99f-30f6022f0db0",
+      "name": "Get Support Request",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblKfKX1R7TjO8xB5"
+        },
+        "filterByFormula": "={{ \"OR({ticket_id}='TKT-\" + $('Execute Workflow Trigger').first().json.request_id + \"', FIND('\" + $('Execute Workflow Trigger').first().json.request_id + \"', ARRAYJOIN({request_id}))>0)\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -448,
+        144
+      ],
+      "id": "5bd1444f-7b89-4192-a42c-1fd5e8128835",
+      "name": "Find Existing Ticket",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d1000000-0000-4000-8000-000000000001",
+                    "leftValue": "={{\n  !!$('Find Existing Ticket').first().json.id &&\n  ['direct_ticket', 'confirmed_escalation'].includes(\n    $('Execute Workflow Trigger').first().json.action\n  )\n}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reuse"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d1000000-0000-4000-8000-000000000002",
+                    "leftValue": "={{ $('Find Existing Ticket').first().json.id || '' }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "empty",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "d1000000-0000-4000-8000-000000000003",
+                    "leftValue": "={{ $('Get Support Request').first().json.id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "d1000000-0000-4000-8000-000000000004",
+                    "leftValue": "={{\n  (\n    $('Execute Workflow Trigger').first().json.action === 'direct_ticket' &&\n    $('Get Support Request').first().json.fields.status === 'NEW'\n  ) ||\n  (\n    $('Execute Workflow Trigger').first().json.action === 'confirmed_escalation' &&\n    $('Get Support Request').first().json.fields.status === 'AWAITING_ESCALATION'\n  )\n}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Create"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Reject"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        128
+      ],
+      "id": "e10a919c-5cda-4313-be3b-fb7f4602fccd",
+      "name": "Route Ticket Action"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblKfKX1R7TjO8xB5"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ticket_id": "=TKT-{{ $('Execute Workflow Trigger').first().json.request_id }}",
+            "request_id": "={{ [$('Get Support Request').first().json.id] }}",
+            "status": "OPEN"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ticket_id",
+              "displayName": "ticket_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "OPEN",
+                  "value": "OPEN"
+                },
+                {
+                  "name": "IN_PROGRESS",
+                  "value": "IN_PROGRESS"
+                },
+                {
+                  "name": "RESOLVED",
+                  "value": "RESOLVED"
+                },
+                {
+                  "name": "CLOSED",
+                  "value": "CLOSED"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b9b2e9ce-048e-4956-95ff-069c5f1e0e0c",
+      "name": "Create IT Ticket"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tbl2QY27S7LVlXgLT"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Get Support Request').first().json.id }}",
+            "status": "TICKET_CREATED",
+            "response_deadline": "={{ null }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "NEW",
+                  "value": "NEW"
+                },
+                {
+                  "name": "AI_IN_PROGRESS",
+                  "value": "AI_IN_PROGRESS"
+                },
+                {
+                  "name": "AWAITING_FEEDBACK",
+                  "value": "AWAITING_FEEDBACK"
+                },
+                {
+                  "name": "AWAITING_ESCALATION",
+                  "value": "AWAITING_ESCALATION"
+                },
+                {
+                  "name": "TICKET_CREATED",
+                  "value": "TICKET_CREATED"
+                },
+                {
+                  "name": "RESOLVED",
+                  "value": "RESOLVED"
+                },
+                {
+                  "name": "CLOSED_NO_TICKET",
+                  "value": "CLOSED_NO_TICKET"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "response_deadline",
+              "displayName": "response_deadline",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        72
+      ],
+      "id": "5df84102-43a8-4d9d-bf58-b867a3b3846f",
+      "name": "Set Request TICKET_CREATED",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Get Support Request').first().json.fields.slack_user_id }}",
+          "mode": "id"
+        },
+        "text": "={{ 'Your IT ticket *' + ($('Find Existing Ticket').first().json.ticket_id || ('TKT-' + $('Execute Workflow Trigger').first().json.request_id)) + '* is open. A technician will follow up with you.' }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        80
+      ],
+      "id": "36b51c7e-ebca-4384-9752-2add5efca6cd",
+      "name": "Send Ticket Confirmation",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblbGo4z00uEGxvtO"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "=EVT-{{ $('Execute Workflow Trigger').first().json.request_id }}-{{ $now.toMillis() }}",
+            "request_id": "={{ $('Get Support Request').first().json.id ? [$('Get Support Request').first().json.id] : [] }}",
+            "event_type": "WORKFLOW_ERROR",
+            "component": "SLACK",
+            "error_code": "SLACK_CONFIRMATION_FAILED"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "REQUEST_CREATED",
+                  "value": "REQUEST_CREATED"
+                },
+                {
+                  "name": "AI_ANSWER_DELIVERED",
+                  "value": "AI_ANSWER_DELIVERED"
+                },
+                {
+                  "name": "FEEDBACK_RECEIVED",
+                  "value": "FEEDBACK_RECEIVED"
+                },
+                {
+                  "name": "ESCALATION_CONFIRMED",
+                  "value": "ESCALATION_CONFIRMED"
+                },
+                {
+                  "name": "TICKET_CREATED",
+                  "value": "TICKET_CREATED"
+                },
+                {
+                  "name": "TIMEOUT_CLOSED",
+                  "value": "TIMEOUT_CLOSED"
+                },
+                {
+                  "name": "WORKFLOW_ERROR",
+                  "value": "WORKFLOW_ERROR"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "component",
+              "displayName": "component",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SLACK",
+                  "value": "SLACK"
+                },
+                {
+                  "name": "N8N",
+                  "value": "N8N"
+                },
+                {
+                  "name": "RAG",
+                  "value": "RAG"
+                },
+                {
+                  "name": "AIRTABLE",
+                  "value": "AIRTABLE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_code",
+              "displayName": "error_code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        208
+      ],
+      "id": "ab9e1ea8-9f68-437b-81c9-3325e887260d",
+      "name": "Log Notification Failure"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblbGo4z00uEGxvtO"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "=EVT-{{ $('Execute Workflow Trigger').first().json.request_id }}-{{ $now.toMillis() }}",
+            "request_id": "={{ $('Get Support Request').first().json.id ? [$('Get Support Request').first().json.id] : [] }}",
+            "event_type": "WORKFLOW_ERROR",
+            "component": "N8N",
+            "error_code": "INVALID_TICKET_REQUEST"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "REQUEST_CREATED",
+                  "value": "REQUEST_CREATED"
+                },
+                {
+                  "name": "AI_ANSWER_DELIVERED",
+                  "value": "AI_ANSWER_DELIVERED"
+                },
+                {
+                  "name": "FEEDBACK_RECEIVED",
+                  "value": "FEEDBACK_RECEIVED"
+                },
+                {
+                  "name": "ESCALATION_CONFIRMED",
+                  "value": "ESCALATION_CONFIRMED"
+                },
+                {
+                  "name": "TICKET_CREATED",
+                  "value": "TICKET_CREATED"
+                },
+                {
+                  "name": "TIMEOUT_CLOSED",
+                  "value": "TIMEOUT_CLOSED"
+                },
+                {
+                  "name": "WORKFLOW_ERROR",
+                  "value": "WORKFLOW_ERROR"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "component",
+              "displayName": "component",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SLACK",
+                  "value": "SLACK"
+                },
+                {
+                  "name": "N8N",
+                  "value": "N8N"
+                },
+                {
+                  "name": "RAG",
+                  "value": "RAG"
+                },
+                {
+                  "name": "AIRTABLE",
+                  "value": "AIRTABLE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_code",
+              "displayName": "error_code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        288
+      ],
+      "id": "3202e2f2-594c-4ee1-b2c4-323354b32fd6",
+      "name": "Log Rejected Request"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblKfKX1R7TjO8xB5"
+        },
+        "filterByFormula": "={{ \"OR({ticket_id}='TKT-\" + $('Execute Workflow Trigger').first().json.request_id + \"', FIND('\" + $('Execute Workflow Trigger').first().json.request_id + \"', ARRAYJOIN({request_id}))>0)\" }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        72
+      ],
+      "id": "1077768a-2565-49f6-a1de-34032500dacf",
+      "name": "Count Tickets For Request",
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d2000000-0000-4000-8000-000000000001",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        80
+      ],
+      "id": "b04f2f00-dd95-466e-8f8b-e25e76c11e27",
+      "name": "Duplicate Suspected?",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "mode": "id",
+          "value": "app280SkIFj8sPhZo"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tblbGo4z00uEGxvtO"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event_id": "=EVT-{{ $('Execute Workflow Trigger').first().json.request_id }}-{{ $now.toMillis() }}",
+            "request_id": "={{ [$('Get Support Request').first().json.id] }}",
+            "event_type": "WORKFLOW_ERROR",
+            "component": "AIRTABLE",
+            "error_code": "DUPLICATE_TICKET_SUSPECTED"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "event_id",
+              "displayName": "event_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "request_id",
+              "displayName": "request_id",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "REQUEST_CREATED",
+                  "value": "REQUEST_CREATED"
+                },
+                {
+                  "name": "AI_ANSWER_DELIVERED",
+                  "value": "AI_ANSWER_DELIVERED"
+                },
+                {
+                  "name": "FEEDBACK_RECEIVED",
+                  "value": "FEEDBACK_RECEIVED"
+                },
+                {
+                  "name": "ESCALATION_CONFIRMED",
+                  "value": "ESCALATION_CONFIRMED"
+                },
+                {
+                  "name": "TICKET_CREATED",
+                  "value": "TICKET_CREATED"
+                },
+                {
+                  "name": "TIMEOUT_CLOSED",
+                  "value": "TIMEOUT_CLOSED"
+                },
+                {
+                  "name": "WORKFLOW_ERROR",
+                  "value": "WORKFLOW_ERROR"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "component",
+              "displayName": "component",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "SLACK",
+                  "value": "SLACK"
+                },
+                {
+                  "name": "N8N",
+                  "value": "N8N"
+                },
+                {
+                  "name": "RAG",
+                  "value": "RAG"
+                },
+                {
+                  "name": "AIRTABLE",
+                  "value": "AIRTABLE"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "error_code",
+              "displayName": "error_code",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ],
+      "id": "f13e05b3-a343-48a2-a0c0-1a8177e1e9fe",
+      "name": "Log Suspected Duplicate",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Support Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Support Request": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Ticket": {
+      "main": [
+        [
+          {
+            "node": "Route Ticket Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Ticket Action": {
+      "main": [
+        [
+          {
+            "node": "Set Request TICKET_CREATED",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create IT Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejected Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IT Ticket": {
+      "main": [
+        [
+          {
+            "node": "Set Request TICKET_CREATED",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Request TICKET_CREATED": {
+      "main": [
+        [
+          {
+            "node": "Count Tickets For Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Ticket Confirmation": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Log Notification Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Count Tickets For Request": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Suspected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Suspected?": {
+      "main": [
+        [
+          {
+            "node": "Log Suspected Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Ticket Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Suspected Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Send Ticket Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
